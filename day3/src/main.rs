@@ -22,15 +22,21 @@ fn priority(c: char) -> u32 {
     }
 }
 
-fn common_among_all_three_rucksacks([a_sack, b_sack, c_sack]: &[&str; 3]) -> char {
-    for a in a_sack.chars() {
-        for b in b_sack.chars() {
-            if a == b && c_sack.contains(a) {
-                return a;
+fn common_among_all_three_rucksacks(sacks: &[&str]) -> char {
+    match sacks {
+        [a_sack, b_sack, c_sack] => {
+            for a in a_sack.chars() {
+                for b in b_sack.chars() {
+                    if a == b && c_sack.contains(a) {
+                        return a;
+                    }
+                }
             }
-        }
+            panic!("Searched 3 sacks, but did not find a common item")
+        },
+        _ => panic!("Called with wrong number of sacks")
     }
-    panic!("Searched 3 sacks, but did not find a common item")
+    
 }
 
 fn main() {
@@ -44,24 +50,13 @@ fn main() {
 
     println!("sum of priorities: {}", part_1);
 
-    // Chunking was the hardest part for me.
-    // I looked at https://doc.rust-lang.org/stable/std/iter/trait.Iterator.html#method.array_chunks but avoided it because I wanted to use the stable compiler
-    // Just learned I could have used https://doc.rust-lang.org/std/primitive.slice.html#method.chunks
-    let mut lines = input.lines().peekable();
-    let mut part_2 = 0u32;
-    while lines.peek().is_some() {
-        let group = &[
-            lines.next().expect("Another item exists; we peeked"),
-            lines
-                .next()
-                .expect("Number of lines should be a multiple of 3 (second)"),
-            lines
-                .next()
-                .expect("Number of lines should be a multiple of 3 (third)"),
-        ];
-
-        part_2 += priority(common_among_all_three_rucksacks(group));
-    }
+    let part_2: u32 = input
+        .lines()
+        .collect::<Vec<_>>()[..]
+        .chunks(3)
+        .map(common_among_all_three_rucksacks)
+        .map(priority)
+        .sum();
 
     println!("sum of priorities: {}", part_2);
 }
