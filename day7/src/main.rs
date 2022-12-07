@@ -30,7 +30,6 @@ fn main() {
     // Populate the tree from the input contents
     for cmd in input {
         let parts = cmd.split_whitespace().collect::<Vec<_>>();
-        println!("cmd is {:?}, parts is {:?}", cmd, parts);
 
         match parts[0] {
             "cd" => {
@@ -80,18 +79,27 @@ fn main() {
         }
     }
 
-    let mut at_most = Vec::<u32>::new();
     // Now traverse the tree finding directories that are at most 100_000
-    let _root_size = find_dirs(&mut at_most, &root);
+    let mut dir_sizes = Vec::<u32>::new();
+    let root_size = find_dirs(&mut dir_sizes, &root);
 
-    println!("Final accumulator is {:?}", at_most);
-
-    let part_1 = at_most
+    let part_1 = dir_sizes
         .iter()
         .filter(|size| size <= &&100_000u32)
         .sum::<u32>();
 
-    println!("part 1; {:?}", part_1);
+    println!("part 1: {:?}", part_1);
+
+    let disk_size = 70_000_000;
+    let needed_unused = 30_000_000;
+    let currently_available = disk_size - root_size;
+    let needed_to_free = needed_unused - currently_available;
+
+    dir_sizes.sort();
+
+    let part_2 = dir_sizes.iter().find(|size| size >= &&needed_to_free).unwrap();
+
+    println!("part 2: {:?}", part_2);
 }
 
 fn find_dirs(accumulator: &mut Vec<u32>, dir: &Rc<Directory>) -> u32 {
