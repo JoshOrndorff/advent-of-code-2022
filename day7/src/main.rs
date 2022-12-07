@@ -1,11 +1,12 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(PartialEq, Eq)]
-struct Directory<'parent> {
+struct Directory {
     name: String,
-    parent: Option<&'parent Directory<'parent>>,
-    files: RefCell<Vec<(u32, String)>>,
-    children: RefCell<Vec<Directory<'parent>>>,
+    parent: Option<Rc<Directory>>,
+    files: RefCell<Vec<Rc<(u32, String)>>>,
+    children: RefCell<Vec<Rc<Directory>>>,
 }
 
 fn main() {
@@ -15,16 +16,16 @@ fn main() {
 
     // This variable owns the root and is useful in case we encounter `cd /` in the middle of the input
     // Every other directory will be owned by its parent
-    let root = Directory {
+    let root = Rc::new(Directory {
         name: "/".to_string(),
         parent: None,
         files: RefCell::new(Vec::new()),
         children: RefCell::new(Vec::new()),
-    };
+    });
 
     // Track the current working directory. Initialize it to root to satisfy the compiler
     // even though we expect inputs to start with `cd /`.
-    let mut cwd = &root;
+    let mut cwd = Rc::clone(&root);
 
     for cmd in input {
         let parts = cmd.split_whitespace().collect::<Vec<_>>();
@@ -33,17 +34,20 @@ fn main() {
             "cd" => {
                 let param = parts[1];
                 cwd = match param {
-                    "/" => &root,
-                    ".." => cwd.parent.expect("Shouldn't call `cd ..` in root"),
+                    "/" => Rc::clone(&root),
+                    ".." => {
+                        let p = cwd.parent.as_ref().expect("Shouldn't call `cd ..` in root");
+                        Rc::clone(
+                            p
+                        )
+                    },
                     target_name => {
-                        let children = cwd
-                        .children
-                        .borrow();
+                        let children = cwd.children.borrow();
 
-                        &*children
-                        .iter()
-                        .find(|ref d| d.name == target_name)
-                        .expect("Shouldn't cd into non-existent child directory")
+                        Rc::clone(children
+                            .iter()
+                            .find(|ref d| d.name == target_name)
+                            .expect("Shouldn't cd into non-existent child directory"))
 
                         // let mut target_node = &root;
                         // for c in &*children {
@@ -51,8 +55,8 @@ fn main() {
                         //         target_node = c;
                         //     }
                         // }
-                        // target_node
-                    },
+                        // Rc::clone(target_node)
+                    }
                 };
             }
             "ls" => {
@@ -62,17 +66,17 @@ fn main() {
                     };
                     match size_or_dir {
                         &"dir" => {
-                            cwd.children.borrow_mut().push(Directory {
+                            cwd.children.borrow_mut().push(Rc::new(Directory {
                                 name: name.to_string(),
-                                parent: Some(&cwd),
+                                parent: Some(Rc::clone(&cwd)),
                                 children: RefCell::new(Vec::new()),
                                 files: RefCell::new(Vec::new()),
-                            });
+                            }));
                         }
-                        size => cwd.files.borrow_mut().push((
+                        size => cwd.files.borrow_mut().push(Rc::new((
                             size.parse().expect("file sizes should parse"),
                             name.to_string(),
-                        )),
+                        ))),
                     }
                 }
             }
