@@ -4,7 +4,7 @@ use sscanf::sscanf;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct CPU {
     x: i32,
-    clock: u32,
+    clock: i32,
 }
 
 impl Default for CPU {
@@ -48,37 +48,55 @@ impl CPU {
 fn main() {
     let input = std::fs::read_to_string("./input.txt").expect("should read input file");
     let program = input.trim().lines().map(Instruction::from);
-
-    let p: Vec<_> = program.clone().collect();
-    println!("program {:?}", p);
+    
+    // ---------- Part 1 ---------------------
 
     let mut signal_strengths = Vec::<i32>::new();
     let mut cpu = CPU::default();
 
-    for inst in program {
+    for inst in program.clone() {
 
         let next_state = cpu.next_state(inst);
 
-        let mut next_target_cycle = 20 + signal_strengths.len() as u32 * 40;
+        let mut next_target_cycle = 20 + signal_strengths.len() as i32 * 40;
         while next_state.clock >= next_target_cycle {
-            println!("next target cycle: {:?}", next_target_cycle);
-            signal_strengths.push(cpu.x * <u32 as TryInto<i32>>::try_into(next_target_cycle).unwrap());
-            next_target_cycle = 20 + signal_strengths.len() as u32 * 40;
+            signal_strengths.push(cpu.x * next_target_cycle);
+            next_target_cycle = 20 + signal_strengths.len() as i32 * 40;
         }
-
-
-        println!("cpu: {:?}", cpu);
-        println!("signal strengths: {:?}\n\n", signal_strengths);
 
         cpu = next_state;
     }
 
+    println!("signal strength: {:?}", signal_strengths.iter().sum::<i32>());
 
-    // Saving this line in case I need it later
-    // Takes an iterator of instructions and runs it to completion
-    //.fold(CPU::default(), |prev_state, inst| prev_state.next_state(inst));
+    // ---------- Part 2 ---------------------
+    let mut program = program;
 
-    
+    let mut cpu = CPU::default();
+    let mut cpu_next = cpu.next_state(program.next().expect("should have at least one instruction"));
 
-    println!("Hello, world!: {:?}", signal_strengths.iter().sum::<i32>());
+    'outer:
+    for row in 0..6 {
+        for col in 0..40 {
+            let current_cycle = row * 40 + col + 1;
+
+            if current_cycle > cpu_next.clock {
+                cpu = cpu_next;
+                let inst = match program.next() {
+                    Some(inst) => inst,
+                    None => {
+                        break 'outer;
+                    }
+                };
+                cpu_next = cpu_next.next_state(inst);
+            }
+
+            if i32::abs(col - cpu.x) <= 1 {
+                print!("#");
+            } else {
+                print!(" ");
+            }
+        }
+        println!();
+    }
 }
