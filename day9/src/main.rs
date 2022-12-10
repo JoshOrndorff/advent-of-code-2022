@@ -12,10 +12,9 @@ fn main() {
         // .map(|r| {println!("{:?}", r); r})
         .map(|r| r.unwrap());
 
-    let mut tail_spots = HashSet::<(i32, i32)>::new();
+    
     let mut head = (0, 0);
-    let mut tail = (0, 0);
-
+    let mut head_positions =Vec::new();
     for (direction, steps) in motions {
         for _ in 0..steps {
             head = match (head, direction) {
@@ -25,35 +24,46 @@ fn main() {
                 ((row, col), 'R') => (row, col + 1),
                 _ => panic!("Encountered invalid direction"),
             };
-
-            let horizontal_displacement = head.0 - tail.0;
-            let vertical_displacement = head.1 - tail.1;
-
-            if horizontal_displacement > 1 {
-                tail.0 += 1;
-                tail.1 = head.1;
-            } else if horizontal_displacement < -1 {
-                tail.0 -= 1;
-                tail.1 = head.1;
-            }
-
-            if vertical_displacement > 1 {
-                tail.1 += 1;
-                tail.0 = head.0;
-            } else if vertical_displacement < -1 {
-                tail.1 -= 1;
-                tail.0 = head.0;
-            }
-
-            println!("Head spot: {:?}\nTail spot: {:?}\n", head, tail);
-            
-            tail_spots.insert(tail);
+            head_positions.push(head)
         }
     }
 
-    // for tail in &tail_spots {
-    //     println!("{:?}", tail);
-    // }
+    let mut tail_spots = HashSet::<(i32, i32)>::new();
+    let mut tail = (0, 0);
+
+    for head in head_positions {
+
+        let horizontal_displacement = head.0 - tail.0;
+        let vertical_displacement = head.1 - tail.1;
+
+        tail = match(horizontal_displacement, vertical_displacement, tail) {
+            (2, 2, (x, y)) => (x + 1, y + 1),
+            (1, 2,(x, y)) => (x + 1, y + 1),
+            (0, 2, (x, y)) => (x, y + 1),
+            (-1, 2, (x, y)) => (x - 1, y +1),
+            (-2, 2, (x, y)) => (x - 1, y + 1),
+            
+            (-2, 1, (x, y)) => (x - 1, y + 1),
+            (-2, 0, (x, y)) => (x - 1, y),
+            (-2, -1, (x, y)) => (x - 1, y - 1),
+
+            (-2, -2, (x, y)) => (x - 1, y - 1),
+            (-1, -2, (x, y)) => (x - 1, y - 1),
+            (0, -2, (x, y)) => (x, y - 1),
+            (1, -2, (x, y)) => (x + 1, y - 1),
+            (2, -2, (x, y)) => (x + 1, y - 1),
+            
+            (2, -1, (x, y)) => (x + 1, y - 1),
+            (2, 0, (x, y)) => (x + 1, y),
+            (2, 1, (x, y)) => (x + 1, y + 1),
+
+            (_, _, (x, y)) => (x, y),
+        };
+
+        println!("Head spot: {:?}\nTail spot: {:?}\n", head, tail);
+        
+        tail_spots.insert(tail);
+    }
 
     println!("part 1: {:?}", tail_spots.len());
 }
