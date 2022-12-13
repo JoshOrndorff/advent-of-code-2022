@@ -1,7 +1,8 @@
 use std::cmp::Ordering;
 use Signal::*;
+use itertools::Itertools;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 enum Signal {
     Int(u32),
     List(Vec<Signal>),
@@ -75,8 +76,16 @@ impl PartialOrd for Signal {
     }
 }
 
+impl Ord for Signal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).expect("All comparisons should return Some")
+    }
+}
+
 fn main() {
     let input = std::fs::read_to_string("./input.txt").expect("should read input file");
+
+    // -------- Part 1 ----------------
 
     let pairs = input.trim().split("\n\n").map(|s| {
         let line_break_index = s
@@ -87,16 +96,31 @@ fn main() {
         (signal_1, signal_2)
     });
 
-    let indices = pairs
+    let part_1: usize = pairs
         .enumerate()
         .filter_map(|(i, (s1, s2))| (s1 < s2).then_some(i + 1))
-        .collect::<Vec<_>>();
-
-    println!("The correctly ordered indices are: {:?}", indices);
-
-    let part_1: usize = indices.iter().sum();
+        .sum();
 
     println!("part 1: {}", part_1);
+
+    // -------- Part 2 ----------------
+
+    let divider_packets = vec![
+        List(vec![List(vec![Int(2)])]),
+        List(vec![List(vec![Int(6)])]),
+    ];
+
+    let part_2: usize = input
+        .trim()
+        .split_ascii_whitespace()
+        .map(Signal::from)
+        .chain(divider_packets.iter().cloned())
+        .sorted()
+        .enumerate()
+        .filter_map(|(i, s)| divider_packets.contains(&s).then_some(i + 1))
+        .product();
+
+    println!("part 2: {}", part_2);
 }
 
 #[test]
