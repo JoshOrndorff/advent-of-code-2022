@@ -1,6 +1,3 @@
-// 6190 is too low - got this using <
-// 6460 is too high - got this using <=
-
 use std::cmp::Ordering;
 use Signal::*;
 
@@ -53,18 +50,27 @@ impl PartialOrd for Signal {
             (Int(a), Int(b)) => Some(a.cmp(b)),
             (Int(a), List(_)) => List(vec![Int(*a)]).partial_cmp(other),
             (List(_), Int(b)) => self.partial_cmp(&List(vec![Int(*b)])),
-            (List(aa), List(bb)) => match (&aa[..], &bb[..]) {
-                ([], []) => Some(Ordering::Equal),
-                ([], _) => Some(Ordering::Less),
-                (_, []) => Some(Ordering::Greater),
-                ([a, ..], [b, ..]) => {
-                    if a == b {
-                        List(aa[1..].to_vec()).partial_cmp(&List(bb[1..].to_vec()))
-                    } else {
-                        a.partial_cmp(b)
+            (List(aa), List(bb)) => {
+                let mut i = 0usize;
+                loop {
+                    if i >= aa.len() && i >= bb.len() {
+                        return Some(Ordering::Equal);
                     }
+                    if i >= aa.len() {
+                        return Some(Ordering::Less);
+                    }
+                    if i >= bb.len() {
+                        return Some(Ordering::Greater);
+                    }
+                    if aa[i] < bb[i] {
+                        return Some(Ordering::Less);
+                    }
+                    if aa[i] > bb[i] {
+                        return Some(Ordering::Greater);
+                    }
+                    i += 1;
                 }
-            },
+            }
         }
     }
 }
@@ -83,7 +89,7 @@ fn main() {
 
     let indices = pairs
         .enumerate()
-        .filter_map(|(i, (s1, s2))| (s1 <= s2).then_some(i + 1))
+        .filter_map(|(i, (s1, s2))| (s1 < s2).then_some(i + 1))
         .collect::<Vec<_>>();
 
     println!("The correctly ordered indices are: {:?}", indices);
@@ -171,5 +177,13 @@ fn compare_double_empty_vs_empty() {
 fn compare_list_of_single_int_vs_empty_list() {
     let a = List(vec![Int(4)]);
     let b = List(vec![]);
+    assert_eq!(Some(Ordering::Greater), a.partial_cmp(&b))
+}
+
+#[test]
+fn should_not_be_equal() {
+    let a = Signal::from("[7,9]");
+    let b = Signal::from("[[7]]");
+
     assert_eq!(Some(Ordering::Greater), a.partial_cmp(&b))
 }
