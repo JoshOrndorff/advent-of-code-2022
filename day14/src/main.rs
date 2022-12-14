@@ -21,8 +21,6 @@ fn main() {
     let mut cave: HashMap<(usize, usize), char> = HashMap::new();
 
     for structure in rock_structures {
-        // println!("Processing new structure");
-
         for (x, y) in points_in_path(&structure.collect::<Vec<_>>()) {
             if y > lowest {
                 lowest = y;
@@ -33,7 +31,6 @@ fn main() {
             if x < leftmost {
                 leftmost = x;
             }
-            // println!("  inserting point {:?}", (x, y));
             cave.insert((x, y), '#');
         }
     }
@@ -46,9 +43,10 @@ fn main() {
     let mut sand_counter = 0;
     let mut part_1 = None;
 
-    for i in 0..100000 {
+    loop {
+        // If this is the first sand past the lowest structure,
+        // Set aside the count for part 1
         if current_sand.1 > lowest && part_1.is_none() {
-            println!("updating");
             part_1 = Some(sand_counter);
         }
 
@@ -65,16 +63,27 @@ fn main() {
         // Check diagonal right
         else if !cave.contains_key(&(x + 1, y + 1)) && y + 1 != floor {
             current_sand = (x + 1, y + 1);
+
+        // Commit resting place to cave and respawn
         } else {
-            // Commit resting place to cave and respawn
             cave.insert(current_sand, 'o');
-            current_sand = SAND_SPAWN;
             sand_counter += 1;
-            // visualize_cave(&cave, lowest, rightmost, leftmost);
+
+            // When we block the sand spawn location, we're done
+            if current_sand == SAND_SPAWN {
+                break;
+            }
+
+            current_sand = SAND_SPAWN;
+            
+            if sand_counter % 400 == 0 {
+                visualize_cave(&cave, lowest, rightmost, leftmost);
+            }
         }
     }
 
     println!("part 1: {}", part_1.unwrap());
+    println!("part 2: {}", sand_counter);
 }
 
 fn points_in_path(points: &[(usize, usize)]) -> Vec<(usize, usize)> {
@@ -110,9 +119,10 @@ fn visualize_cave(
     leftmost: usize,
 ) {
     for row_index in 0..=lowest {
-        for col_index in leftmost..=rightmost {
+        for col_index in leftmost-2..=rightmost+2 {
             print!("{}", cave.get(&(col_index, row_index)).unwrap_or(&'.'));
         }
         println!();
     }
+    println!();
 }
