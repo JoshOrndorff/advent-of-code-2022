@@ -2,13 +2,13 @@ use sscanf::sscanf;
 use std::collections::HashSet;
 
 // For the example
-// const KEY_ROW: i32 = 10;
-// const BOUND: i32 = 20;
+// const KEY_ROW: i64 = 10;
+// const BOUND: i64 = 20;
 // const INPUT_FILE: &str = "./example.txt";
 
 // For the real input
-const KEY_ROW: i32 = 2_000_000;
-const BOUND: i32 = 4_000_000;
+const KEY_ROW: i64 = 2_000_000;
+const BOUND: i64 = 4_000_000;
 const INPUT_FILE: &str = "./input.txt";
 
 fn main() {
@@ -21,10 +21,10 @@ fn main() {
             sscanf!(
                 l,
                 "Sensor at x={}, y={}: closest beacon is at x={}, y={}",
-                i32,
-                i32,
-                i32,
-                i32
+                i64,
+                i64,
+                i64,
+                i64
             )
             .unwrap()
         });
@@ -34,7 +34,7 @@ fn main() {
         .collect::<HashSet<_>>();
 
     let centers_and_radii = circles.clone()
-        .map(|(sx, sy, bx, by)| ((sx, sy), i32::abs(sx - bx) + i32::abs(sy - by)))
+        .map(|(sx, sy, bx, by)| ((sx, sy), i64::abs(sx - bx) + i64::abs(sy - by)))
         .collect::<Vec<_>>();
 
     // Solve part 1 with a one-off method that dynamically detects bounds as we go
@@ -42,9 +42,9 @@ fn main() {
     let mut blocked_sections = Vec::new();
     let mut x_min = None;
     let mut x_max = None;
-    for ((x, y), r) in &centers_and_radii {
-        let vertical_offset = i32::abs(y - KEY_ROW);
-        if vertical_offset > *r {
+    for ((x, y), r) in centers_and_radii.clone() {
+        let vertical_offset = i64::abs(y - KEY_ROW);
+        if vertical_offset > r {
             continue;
         }
 
@@ -78,37 +78,81 @@ fn main() {
 
     let part_1 = all_covered - known_beacons_key_row.len();
 
-    println!("Part 1: {}", part_1);
+    println!("Part 1: {}", part_1); 
 
-    // In part 2 we are given bounds
-    for x in 0..=BOUND {
-        println!("outer iteration {x} / {BOUND}");
+    // For part 2, searching all 16 trillion candidate points is way too much.
+    // We know there is only a single point that could have the beacon, so
+    // which means that point must be just beyond the boundary. Let's calculate
+    // the boundary of each circle, and search those points.
+    let candidate_points = centers_and_radii
+        .iter()
+        .map(boundary_points)
+        .flatten()
+        .filter(|(x, y)| x >= &0 && y >= &0 && x <= &BOUND && y <= &BOUND);
 
-        for y in 0..=BOUND {
-            // if y % 10_000 == 0 {
-            //     println!("inner iteration {y} / {BOUND}");
-            // }
+    println!("There are now {} candidate points.", candidate_points.clone().count());
 
-            let mut not_in_any = true;
-            for c_and_r in &centers_and_radii{
-                if circle_contains_point(c_and_r, (x, y)) {
-                    not_in_any = false;
-                    break;
-                }
-            }
-
-            if not_in_any {
-                println!("Found location for beacon at ({x}, {y})");
-                println!("Tuning frequency is {}", x * 4_000_000 + y);
+    for (x, y) in candidate_points {
+        let mut not_in_any = true;
+        for c_and_r in &centers_and_radii{
+            if circle_contains_point(c_and_r, (x, y)) {
+                not_in_any = false;
                 break;
             }
         }
+        if not_in_any {
+            println!("Found location for beacon at ({x}, {y})");
+            println!("Tuning frequency is {}", x * 4_000_000 + y);
+            break;
+        }
     }
-
 
 }
 
-fn circle_contains_point(((cx, cy),r): &((i32, i32), i32), (px, py): (i32, i32)) -> bool {
-    let dist_from_center = i32::abs(cx - px)+ i32::abs(cy - py);
+fn circle_contains_point(((cx, cy),r): &((i64, i64), i64), (px, py): (i64, i64)) -> bool {
+    let dist_from_center = i64::abs(cx - px)+ i64::abs(cy - py);
     dist_from_center <= *r
+}
+
+fn boundary_points(((cx, cy), r): &((i64, i64), i64)) -> Vec<(i64, i64)> {
+    // We actually want the points just beyond the circle, so we'll use a
+    // radius that is one bigger
+    let r = *r + 1;
+
+    let mut boundary = Vec::new();
+
+    // Start at the top
+    let mut y = cy - r;
+    let mut x = *cx;
+
+    // Iterate down the top right side
+    for _ in 0..r {
+        boundary.push((x, y));
+        y += 1;
+        x += 1;
+    }
+
+    // Down the bottom right side
+    for _ in 0..r {
+        boundary.push((x, y));
+        y += 1;
+        x -= 1;
+    }
+
+    // Up the bottom left side
+    for _ in 0..r {
+        boundary.push((x, y));
+        y -= 1;
+        x -= 1;
+    }
+
+    // Up the top left side
+    for _ in 0..r {
+        boundary.push((x, y));
+        y -= 1;
+        x += 1;
+    }
+
+    boundary
+
 }
