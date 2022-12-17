@@ -1,10 +1,33 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeSet, HashMap};
+use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone)]
+#[derive(Debug, Eq, Clone)]
 struct ExplorationState {
     location: String,
     elephant: String,
     open_valves: BTreeSet<String>,
+}
+
+impl PartialEq for ExplorationState {
+    fn eq(&self, other: &Self) -> bool {
+        self.open_valves == other.open_valves && (
+            (self.location == other.location && self.elephant == other.elephant) ||
+            (self.location == other.elephant && self.elephant == other.location)
+        )
+    }
+}
+
+impl Hash for ExplorationState {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let joined_location_elephant = if self.location < self.elephant {
+            format!("{}, {}", self.location, self.elephant)
+        } else {
+            format!("{}, {}", self.elephant, self.location)
+        };
+        joined_location_elephant.hash(state);
+        self.open_valves.hash(state);
+    }
 }
 
 impl ExplorationState {
@@ -344,4 +367,67 @@ fn explore_valves_with_elephant(
     }
 
     result
+}
+
+fn hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
+#[test]
+fn same_hash() {
+    let s1 = ExplorationState {
+        location: "AA".into(),
+        elephant: "BB".into(),
+        open_valves: BTreeSet::new(),
+    };
+    let h1 = hash(&s1);
+
+    let s2 = ExplorationState {
+        location: "BB".into(),
+        elephant: "AA".into(),
+        open_valves: BTreeSet::new(),
+    };
+    let h2 = hash(&s2);
+
+    assert_eq!(h1, h2);
+}
+
+#[test]
+fn equal() {
+    let s1 = ExplorationState {
+        location: "AA".into(),
+        elephant: "BB".into(),
+        open_valves: BTreeSet::new(),
+    };
+
+    let s2 = ExplorationState {
+        location: "BB".into(),
+        elephant: "AA".into(),
+        open_valves: BTreeSet::new(),
+    };
+
+    assert_eq!(s1, s2);
+}
+
+#[test]
+fn map_key_equiv() {
+    let s1 = ExplorationState {
+        location: "AA".into(),
+        elephant: "BB".into(),
+        open_valves: BTreeSet::new(),
+    };
+
+    let s2 = ExplorationState {
+        location: "BB".into(),
+        elephant: "AA".into(),
+        open_valves: BTreeSet::new(),
+    };
+
+    let mut m = HashMap::<ExplorationState, u64>::new();
+
+    m.insert(s1, 7);
+
+    assert_eq!(m.get(&s2), Some(&7u64));
 }
