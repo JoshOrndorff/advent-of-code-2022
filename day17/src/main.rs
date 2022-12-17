@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use Shape::*;
 
@@ -14,7 +14,7 @@ enum Shape {
 impl Shape {
     /// Returns a list of coordinates that this shape occupies, given a reference coordinate
     /// which is the lower left corner of its bounding box.
-    fn occupied_cells(&self, x: i32, y: i32) -> Vec<(i32, i32)> {
+    fn occupied_cells(&self, x: i64, y: i64) -> Vec<(i64, i64)> {
         match self {
             Hline => vec![(x, y), (x + 1, y), (x + 2, y), (x + 3, y)],
             Plus => vec![(x, y + 1), (x + 1, y), (x + 1, y + 1), (x + 1, y + 2), (x + 2, y+ 1)],
@@ -25,7 +25,7 @@ impl Shape {
     }
 
     /// The width of the given shape
-    fn width(&self) -> i32 {
+    fn width(&self) -> i64 {
         match self {
             Hline => 4,
             Plus => 3,
@@ -36,7 +36,7 @@ impl Shape {
     }
 
     /// The height of the given shape
-    fn height(&self) -> i32 {
+    fn height(&self) -> i64 {
         match self {
             Hline => 1,
             Plus => 3,
@@ -50,13 +50,18 @@ impl Shape {
 fn main() {
     let input = std::fs::read_to_string("./input.txt").expect("read input file");
 
+    let mut fingerprints = HashMap::new();
+    let mut historical_heights = Vec::new();
+    let mut cycle_length = 0;
+    let mut height_diff = 0;
+
     let mut upcoming_shapes = vec![Hline, Plus, L, Vline, Square].into_iter().cycle();
     let mut upcoming_wind = input.trim().chars().cycle();
 
-    let mut occupied_cells = HashSet::<(i32, i32)>::new();
+    let mut occupied_cells = HashSet::<(i64, i64)>::new();
     let mut highest_occupied = 0;
 
-    for _ in 0..2022 {
+    for i in 0..1000_000_000i64 {
         let shape = upcoming_shapes.next().unwrap();
 
         let mut x = 2;
@@ -73,7 +78,7 @@ fn main() {
                 _ => panic!("invalid wind character"),
             };
 
-            // If teh shape is not against a wall, and none of the would-be-occupied
+            // If the shape is not against a wall, and none of the would-be-occupied
             // cells are already occupied, then execute the wind blow
             let blown_x = x + wind_offset;
             if blown_x >= 0
@@ -100,12 +105,34 @@ fn main() {
                 break;
             }
         }
+        historical_heights.push(highest_occupied);
+        let fingerprint =  fingerprint_top(&occupied_cells, highest_occupied);
+        if fingerprints.contains_key(&fingerprint) {
+            let prev = fingerprints[&fingerprint];
+            cycle_length = i - prev;
+            height_diff = historical_heights[i as usize] - historical_heights[prev as usize];
+            println!("cycle detected between {} and {}. Shapes dropped: {}, Height added: {}", prev, i, cycle_length, height_diff);
+            break;
+        }
+        fingerprints.insert(fingerprint, i);
     }
 
-    println!("part 1:{}", highest_occupied);
+    // It isn't always necessary (for example, it wasn't with the example input) but it is more reliable to pull the offset
+    // height from after the start of the first detected cycle. Sometimes the very beginning does not follow the cyclical
+    // nature perfectly due to the floor boundary.
+    let part_1_cycles = 2022 / cycle_length;
+    let part_1_offset = 2022 % cycle_length;
+    let part_1 = (part_1_cycles - 1) * height_diff + historical_heights[(part_1_offset + cycle_length - 1) as usize];
+    println!("part 1:{}", part_1);
+
+    let part_2_cycles = 1_000_000_000_000i64 / cycle_length;
+    let part_2_offset = 1_000_000_000_000i64 % cycle_length;
+    let part_2 = (part_2_cycles - 1) * height_diff + historical_heights[(part_2_offset + cycle_length - 1) as usize];
+    println!("part 2:{}", part_2);
 }
 
-fn display_tower(occupied_cells: &HashSet<(i32, i32)>, top: i32, cur_shape: Shape, cur_x: i32, cur_y: i32) {
+#[allow(dead_code)]
+fn display_tower(occupied_cells: &HashSet<(i64, i64)>, top: i64, cur_shape: Shape, cur_x: i64, cur_y: i64) {
     let falling_cells = cur_shape.occupied_cells(cur_x, cur_y);
     for y in (1..=top).rev() {
         print!("{:4} |", y);
@@ -121,4 +148,18 @@ fn display_tower(occupied_cells: &HashSet<(i32, i32)>, top: i32, cur_shape: Shap
         println!("|");
     }
     println!("     +-------+\n");
+}
+
+fn fingerprint_top(occupied_cells: &HashSet<(i64, i64)>, top: i64) -> impl std::hash::Hash + Eq{
+    let mut v = Vec::new();
+
+    for y in (top - 60)..=top {
+        for x in 0..7 {
+            if occupied_cells.contains(&(x, y)) {
+                v.push((x, top - y));
+            }
+        }
+    }
+
+    v
 }
