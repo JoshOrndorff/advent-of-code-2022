@@ -1,7 +1,8 @@
-// 776 is too low
+// 6 is wrong - This was a silly mistake, still starting with 24 sec left
+// 17472 is too low
 
 use sscanf::sscanf;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
 
 type Quad = (u64, u64, u64, u64);
 
@@ -42,11 +43,8 @@ impl From<&str> for Blueprint {
 }
 
 impl Blueprint {
-    fn quality(&self) -> u64 {
-        self.id * self.find_max_geodes()
-    }
 
-    fn find_max_geodes(&self) -> u64 {
+    fn find_max_geodes(&self, time: u64) -> u64 {
         println!("Blueprint is {:?}", self);
 
         let starting_state = State {
@@ -55,7 +53,7 @@ impl Blueprint {
         };
 
         let mut current_generation = HashSet::from([starting_state]);
-        let mut time_left = 24;
+        let mut time_left = time;
 
         while time_left > 0 {
             println!("Time left: {}", time_left);
@@ -100,18 +98,20 @@ impl State {
     fn dominates(&self, other: &Self) -> bool {
 
         // Attempt 2: More geodes is always better.
-        if self.stuff.3 > other.stuff.3 {
-            return true;
-        } else if other.stuff.3 > self.stuff.3 {
-            return false;
-        }
+        // if self.stuff.3 > other.stuff.3 {
+        //     return true;
+        // } else if other.stuff.3 > self.stuff.3 {
+        //     return false;
+        // }
 
-        // Having compared geodes, let's now compare geode bots
-        if self.bots.3 > other.bots.3 {
-            return true;
-        } else if other.bots.3 > self.bots.3 {
-            return false;
-        }
+        // // Having compared geodes, let's now compare geode bots
+        // // Out of curiosity, I tried commenting this out, but it made no difference
+        // //I also tried putting this comparison ahead of the other one, but, again, no effect
+        // if self.bots.3 > other.bots.3 {
+        //     return true;
+        // } else if other.bots.3 > self.bots.3 {
+        //     return false;
+        // }
 
         // I had considered doing a similar comparison for the obsidian, but it fails
         // to find the best solutions for my real input.
@@ -183,40 +183,69 @@ impl State {
 
 fn main() {
 
-    // example_1_geodes();
     let input = std::fs::read_to_string("./input.txt").expect("read input file");
     
-    let part_1: u64 = input
+    // let part_1: u64 = input
+    //     .trim()
+    //     .lines()
+    //     .map(Blueprint::from)
+    //     .map(|b| {
+    //         let q = b.id * b.find_max_geodes(24);
+    //         println!("Quality: {}", q);
+    //         q
+    //     })
+    //     .sum();
+
+    // println!("Part 1: {:?}", part_1);
+
+    let part_2: u64 = input
         .trim()
         .lines()
+        .take(3)
         .map(Blueprint::from)
         .map(|b| {
-            let q = b.quality();
-            println!("Quality: {}", q);
-            q
+            let mg = b.find_max_geodes(32);
+            println!("Most Geodes: {}", mg);
+            mg
         })
-        .sum();
+        .product();
 
-    println!("Part 1: {:?}", part_1);
+    println!("Part 2: {:?}", part_2);
 }
 
 #[test]
-fn example_1_geodes() {
+fn example_1_24_min() {
 
     let s = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.";
     let b = Blueprint::from(s);
 
-    assert_eq!(9, b.find_max_geodes());
-    assert_eq!(9, b.quality());
+    assert_eq!(9, b.find_max_geodes(24));
 }
 
 #[test]
-fn example_2_geodes() {
+fn example_2_24_min() {
 
     let s = "Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
     let b = Blueprint::from(s);
 
-    assert_eq!(12, b.find_max_geodes());
-    assert_eq!(24, b.quality());
+    assert_eq!(12, b.find_max_geodes(24));
+}
+
+#[test]
+fn example_1_32_min() {
+
+    let s = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.";
+    let b = Blueprint::from(s);
+
+    assert_eq!(56, b.find_max_geodes(32));
+}
+
+#[test]
+fn example_2_32_min() {
+
+    let s = "Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
+    let b = Blueprint::from(s);
+
+    assert_eq!(62, b.find_max_geodes(32));
 }
 
