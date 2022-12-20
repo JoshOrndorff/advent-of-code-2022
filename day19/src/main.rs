@@ -1,6 +1,3 @@
-// 6 is wrong - This was a silly mistake, still starting with 24 sec left
-// 17472 is too low
-
 use sscanf::sscanf;
 use std::collections::{HashMap, HashSet};
 
@@ -197,18 +194,18 @@ fn main() {
 
     let input = std::fs::read_to_string("./input.txt").expect("read input file");
     
-    // let part_1: u64 = input
-    //     .trim()
-    //     .lines()
-    //     .map(Blueprint::from)
-    //     .map(|b| {
-    //         let q = b.id * b.find_max_geodes(24);
-    //         println!("Quality: {}", q);
-    //         q
-    //     })
-    //     .sum();
+    let part_1: u64 = input
+        .trim()
+        .lines()
+        .map(Blueprint::from)
+        .map(|b| {
+            let q = b.id * b.find_max_geodes(24);
+            println!("Quality: {}", q);
+            q
+        })
+        .sum();
 
-    // println!("Part 1: {:?}", part_1);
+    println!("Part 1: {:?}", part_1);
 
     let part_2: u64 = input
         .trim()
