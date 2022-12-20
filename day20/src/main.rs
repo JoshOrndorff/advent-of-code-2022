@@ -60,11 +60,6 @@ fn mix_one_round(data: &mut Vec<(usize, i64)>) {
             % (length as i64 - 1)) as usize;
         let in_transit = data.remove(starting_position);
 
-        // When values are at the seam, the example appends them to the end, not the beginning
-        if ending_position == 0 {
-            data.push(in_transit);
-        } else {
-            data.insert(ending_position, in_transit);
-        }
+        data.insert(ending_position, in_transit);
     }
 }
