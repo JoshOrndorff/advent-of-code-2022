@@ -60,45 +60,77 @@ fn main() {
         panic!("Couldn't extract terms from root entry (maybe it isn't Add)")
     };
 
-    println!("Literals before optimization {}", count_literals("root", &monkies));
+    // Optimize the tree so it is faster to calculate.
+    // After optimization, we only re-calculate the arts that depend on the humn value.
+    // Actually it turns out that this optimization was not at all necessary.
+    // Switching to binary search was the winning strategy.
     optimize_monkies("root", &mut monkies);
-    println!("Literals after  optimization {}", count_literals("root", &monkies));
-    
-    // Start with a simple upper bound of 4k and see if we find a suitable humn value
-    for i in 0..100_000_000 {
-        
-        monkies.insert(
-            "humn".into(),
-            Lit(i),
-        );
+
+    // Do binary search to find the right value
+    let mut high = 10000000000000i64;
+    let mut low = 0i64;
+
+    while high != low {
+        let mid = (high + low) / 2;
+
+        monkies.insert("humn".into(), Lit(mid));
 
         let left = monkies[&target1].eval(&monkies);
         let right = monkies[&target2].eval(&monkies);
 
-        if i % 1_000_000 == 0 {
-            // println!("left: {}", left);
-            // println!("right {}", right);
-            println!("Iteration {}", i);
-        };
+        if right == left {
+            println!(
+                "Found initial equality with humn value {}. Continuing to linear search",
+                mid
+            );
+            break;
+        }
+        // BE CAREFUL! The direction of the inequality depends which side of your tree has the "humn" value
+        else if right > left {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+
+    // There maybe multiple integers that solve the puzzle. The website seems to want the lowest one.
+    // So after we find _some_ solution using binary search, we then do a linear search to find the lowest.
+    // TODO would be more reliable to start with the known good value and iterate backwards until mismatch.
+    low = low - 1000;
+
+    for i in low..high {
+        monkies.insert("humn".into(), Lit(i));
+
+        let left = monkies[&target1].eval(&monkies);
+        let right = monkies[&target2].eval(&monkies);
+
         if left == right {
             println!("Found equality with humn value {}", i);
             break;
         }
     }
-}
 
-/// Recursive algorithm to count the number of TERMINAL literals in the tree.
-/// Not every single literal in the map will be counted because some of them will
-/// not be reached by recursion
-fn count_literals(name: &str, monkies: &HashMap<String, Expr>) -> u64 {
-    let e = monkies[name].clone();
-    match e {
-        Lit(_) => 1,
-        Add(p1, p2) => count_literals(&p1, monkies) + count_literals(&p2, monkies),
-        Sub(p1, p2) => count_literals(&p1, monkies) + count_literals(&p2, monkies),
-        Mul(p1, p2) => count_literals(&p1, monkies) + count_literals(&p2, monkies),
-        Div(p1, p2) => count_literals(&p1, monkies) + count_literals(&p2, monkies),
-    }
+    // Let's graph this fucker.
+    // Following https://towardsdatascience.com/how-to-create-plot-in-rust-fdc6c024461c
+    // use plotters::prelude::*;
+    // let root_area = BitMapBackend::new("./test.png", (600, 400)).into_drawing_area();
+    // root_area.fill(&WHITE).unwrap();
+
+    // let mut ctx = ChartBuilder::on(&root_area)
+    //     .set_label_area_size(LabelAreaPosition::Left, 40.0)
+    //     .set_label_area_size(LabelAreaPosition::Bottom, 40.0)
+    //     .set_label_area_size(LabelAreaPosition::Right, 40.0)
+    //     .set_label_area_size(LabelAreaPosition::Top, 40.0)
+    //     .build_cartesian_2d(low..high, 3790998775025..10790998775025i64)
+    //     .unwrap();
+
+    //     ctx.draw_series(
+    //         left_points.iter().map(|point| Circle::new(*point, 1.0_i64, &BLUE)),
+    //     ).unwrap();
+
+    //     ctx.draw_series(
+    //         right_points.iter().map(|point| Circle::new(*point, 1.0_i64, &RED)),
+    //     ).unwrap();
 }
 
 /// Recursive algorithm to optimize the tree. The function returns whether the node
@@ -121,7 +153,7 @@ fn optimize_monkies(name: &str, monkies: &mut HashMap<String, Expr>) -> bool {
                 monkies.insert(name.to_string(), Lit(e.eval(monkies)));
                 false
             }
-        },
+        }
         Sub(p1, p2) => {
             if optimize_monkies(&p1, monkies) | optimize_monkies(&p2, monkies) {
                 true
@@ -129,7 +161,7 @@ fn optimize_monkies(name: &str, monkies: &mut HashMap<String, Expr>) -> bool {
                 monkies.insert(name.to_string(), Lit(e.eval(monkies)));
                 false
             }
-        },
+        }
         Div(p1, p2) => {
             if optimize_monkies(&p1, monkies) | optimize_monkies(&p2, monkies) {
                 true
@@ -137,7 +169,7 @@ fn optimize_monkies(name: &str, monkies: &mut HashMap<String, Expr>) -> bool {
                 monkies.insert(name.to_string(), Lit(e.eval(monkies)));
                 false
             }
-        },
+        }
         Mul(p1, p2) => {
             if optimize_monkies(&p1, monkies) | optimize_monkies(&p2, monkies) {
                 true
@@ -145,7 +177,7 @@ fn optimize_monkies(name: &str, monkies: &mut HashMap<String, Expr>) -> bool {
                 monkies.insert(name.to_string(), Lit(e.eval(monkies)));
                 false
             }
-        },
+        }
     }
 }
 
