@@ -1,7 +1,3 @@
-// 101054 is too high
-// 46226 is too high
-// TODO I didn't consider the case where I wrap around into a wall.
-
 use Motion::*;
 #[derive(Debug)]
 enum Motion {
@@ -19,8 +15,8 @@ enum Direction {
     East,
 }
 
-impl Into<isize> for Direction {
-    fn into(self) -> isize {
+impl Into<usize> for Direction {
+    fn into(self) -> usize {
         match self {
             East => 0,
             South => 1,
@@ -136,7 +132,7 @@ fn main() {
 
     
     let mut heading = East;
-    let mut position = (0isize, row_bounds[0].0 as isize);
+    let mut position = (0usize, row_bounds[0].0);
 
     ///////////////// Start actually wandering
     for motion in route {
@@ -153,9 +149,9 @@ fn main() {
                 for _ in 0..steps {
                     let i = position.0;
                     let mut j = position.1 + 1;
-                    if j > row_bounds[i as usize].1 as isize {
-                        j = row_bounds[i as usize].0 as isize;
-                    } else if grove[i as usize][j as usize] == '#' {
+                    if j > row_bounds[i].1 {
+                        j = row_bounds[i].0;
+                    }  if grove[i][j] == '#' {
                         break;
                     }
                     position = (i, j);
@@ -164,10 +160,14 @@ fn main() {
             (Walk(steps), West) => {
                 for _ in 0..steps {
                     let i = position.0;
-                    let mut j = position.1 - 1;
-                    if j < row_bounds[i as usize].0 as isize {
-                        j = row_bounds[i as usize].1 as isize;
-                    } else if grove[i as usize][j as usize] == '#' {
+                    let mut j = if position.1 == 0 {
+                        row_bounds[i].1
+                    } else {
+                        position.1 - 1
+                    };
+                    if j < row_bounds[i].0 {
+                        j = row_bounds[i].1;
+                    }  if grove[i][j] == '#' {
                         break;
                     }
                     position = (i, j);
@@ -175,11 +175,15 @@ fn main() {
             },
             (Walk(steps), North) => {
                 for _ in 0..steps {
-                    let mut i = position.0 - 1;
                     let j = position.1;
-                    if i < col_bounds[j as usize].0 as isize {
-                        i = col_bounds[j as usize].1 as isize;
-                    } else if grove[i as usize][j as usize] == '#' {
+                    // Test for underflow first
+                    let mut i = if position.0 == 0 {
+                        col_bounds[j].1
+                    }
+                    else { position.0 - 1};
+                    if i < col_bounds[j].0 {
+                        i = col_bounds[j].1;
+                    }  if grove[i][j] == '#' {
                         break;
                     }
                     position = (i, j);
@@ -189,9 +193,9 @@ fn main() {
                 for _ in 0..steps {
                     let mut i = position.0 + 1;
                     let j = position.1;
-                    if i > col_bounds[j as usize].1 as isize {
-                        i = col_bounds[j as usize].0 as isize;
-                    } else if grove[i as usize][j as usize] == '#' {
+                    if i > col_bounds[j].1 {
+                        i = col_bounds[j].0;
+                    }  if grove[i][j] == '#' {
                         break;
                     }
                     position = (i, j);
@@ -203,8 +207,8 @@ fn main() {
     // The problem uses 1-based indexing and I've solved this using 0-based
     let final_row = position.0 + 1;
     let final_column = position.1 + 1;
-    let final_heading: isize = heading.into();
+    let final_heading: usize = heading.into();
     println!("row: {final_row}, column: {final_column}, heading: {final_heading}");
-    let password = 1000 * final_row + 4 * final_column + final_heading;
+    let password: usize = 1000 * final_row + 4 * final_column + final_heading;
     println!("password in {password}");
 }
