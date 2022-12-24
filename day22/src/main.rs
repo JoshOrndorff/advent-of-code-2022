@@ -1,5 +1,6 @@
 // 101054 is too high
 // 46226 is too high
+// TODO I didn't consider the case where I wrap around into a wall.
 
 use Motion::*;
 #[derive(Debug)]
