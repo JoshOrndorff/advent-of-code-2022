@@ -1,7 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque, HashSet};
 
 fn main() {
-    let input = std::fs::read_to_string("./example2.txt").expect("read input file");
+    let input = std::fs::read_to_string("./input.txt").expect("read input file");
 
     let grid: Vec<Vec<char>> = input.lines().map(|l| l.chars().collect()).collect();
 
@@ -24,8 +24,8 @@ fn main() {
         .unwrap()
         .0;
 
-    // We track the blizzards' locations as a HashMap from location to vec of blizzard directions
-    let mut blizzards = HashMap::<(usize, usize), Vec<char>>::new();
+    // We track the blizzards' locations as a BTreeMap from location to vec of blizzard directions
+    let mut blizzards = BTreeMap::<(usize, usize), Vec<char>>::new();
     grid.iter().enumerate().for_each(|(y, l)| {
         l.iter().enumerate().for_each(|(x, c)| {
             if "<>^v#".contains(*c) {
@@ -43,7 +43,9 @@ fn main() {
     // Each "generation" represents one step in our path.
     let mut current_generation = VecDeque::from([(start_x, 0usize)]);
     let mut steps = 0usize;
-    // todo we could keep track of states we've already seen if it proves necessary
+
+    // Keep track of states we've already seen in case there are ways to wander in circles
+    let mut explored: HashSet<(usize, usize, BTreeMap<(usize, usize), Vec<char>>)> = HashSet::new();
 
     'outer: loop {
 
@@ -72,13 +74,21 @@ fn main() {
         let mut next_generation: VecDeque<(usize, usize)> = VecDeque::new();
 
         // Calculate the new blizzards
-        let next_blizzards: HashMap<(usize, usize), Vec<char>> =
+        let next_blizzards: BTreeMap<(usize, usize), Vec<char>> =
             step_blizzards(width, height, &blizzards);
 
         for (x, y) in &current_generation {
+
             if (*x, *y) == destination {
                 println!("reached destination in {steps} steps");
                 break 'outer;
+            }
+
+            // See if we've explored this state before. If so, bail, if not, note it for future
+            if explored.contains(&(*x, *y, next_blizzards.clone())) {
+                continue
+            } else {
+                explored.insert((*x, *y, next_blizzards.clone()));
             }
 
             // Check the five possible move options
@@ -115,9 +125,9 @@ fn main() {
 fn step_blizzards(
     width: usize,
     height: usize,
-    current: &HashMap<(usize, usize), Vec<char>>,
-) -> HashMap<(usize, usize), Vec<char>> {
-    let mut next: HashMap<(usize, usize), Vec<char>> = HashMap::new();
+    current: &BTreeMap<(usize, usize), Vec<char>>,
+) -> BTreeMap<(usize, usize), Vec<char>> {
+    let mut next: BTreeMap<(usize, usize), Vec<char>> = BTreeMap::new();
 
     for ((x, y), directions) in current {
         for direction in directions {
